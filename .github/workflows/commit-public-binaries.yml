@@ -1,0 +1,41 @@
+name: Commit public image binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/assets/**
+      - scripts/restore-public-binaries.mjs
+      - .github/workflows/commit-public-binaries.yml
+
+concurrency:
+  group: commit-public-binaries
+  cancel-in-progress: false
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore public JPEG/PNG binaries
+        run: node scripts/restore-public-binaries.mjs
+      - name: Commit restored files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f public/poster-base.jpg public/icon-crane.png public/icon-train.png
+          if git diff --cached --quiet; then
+            echo "Public binaries already committed"
+            exit 0
+          fi
+          git commit -m "Add public/poster-base.jpg and public/icon-crane.png"
+          git push
