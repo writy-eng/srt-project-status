@@ -1,0 +1,85 @@
+@theme {
+  --font-sans: "Prompt", "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Kanit", "Prompt", "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-bg: #efe6d8;
+  --color-paper: #f7f1e8;
+  --color-fg: #1c1412;
+  --color-ink: #1c1412;
+  --color-muted: #7a6a5c;
+  --color-rule: #d9cbb8;
+  --color-maroon: #71221e;
+  --color-maroon-fg: #f7f1e8;
+  --color-gold: #c6a028;
+  --color-ahead: #157a3a;
+  --color-ahead-fg: #f4faf5;
+  --color-behind: #b42318;
+  --color-behind-fg: #fdf6f5;
+  --color-even: #8a7a70;
+  --color-track-mab: #71221e;
+  --color-track-kk: #1c1412;
+  --color-track-den: #8a5a22;
+  --color-track-ban: #6e5a4e;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --text-folio: 0.72rem;
+  --text-kicker: 0.78rem;
+  --text-masthead: clamp(3.4rem, 11vw, 8rem);
+  --text-display: clamp(1.85rem, 4.4vw, 3.4rem);
+  --text-score: clamp(2.4rem, 5vw, 3.6rem);
+
+  --shadow-issue: 0 0 0 1px color-mix(in oklab, var(--color-ink) 8%, transparent),
+    0 18px 48px color-mix(in oklab, var(--color-ink) 12%, transparent);
+  --aspect-feature: 3 / 2;
+  --aspect-band: 16 / 7;
+  --color-donut-track: #e39a8c;
+  --color-poster-card: #fffdf9;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100%;
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  img {
+    outline: none;
+  }
+}
