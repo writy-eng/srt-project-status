@@ -6,7 +6,12 @@
  * JPEG/PNG assets live in scripts/assets as base64 and this script writes
  * public/poster-base.jpg, public/icon-crane.png, and public/icon-train.png
  * before Vite copies public/ into the build. Existing valid originals (the
- * sandbox copies) are left untouched.
+ * sandbox copies) are left untouched unless the decoded payload is larger
+ * (upgrade the muddy 96KB JPEG to the full-quality poster).
+ *
+ * Full-quality JPEG is stored gzipped in scripts/assets/poster-gz because
+ * raw JPEG base64 contains long repeated runs that the GitHub file API
+ * collapses. Decode: concat .b64 → base64 → gunzip.
  *
  * The Vite plugin restores during config/buildStart, emits the files as
  * build assets, and copies them into Nitro/Vercel static output so
@@ -21,6 +26,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,7 +36,9 @@ const pub = join(root, "public");
 
 const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
 const POSTER_PARTS = 13;
+const POSTER_GZ_PARTS = 16;
 const OUTPUT_DIRS = [
   join(root, ".vercel/output/static"),
   join(root, ".output/public"),
@@ -50,17 +58,28 @@ function isValidImage(dest, magic, minBytes) {
   }
 }
 
+function decodeParts(partPaths) {
+  const b64 = partPaths.map((p) => readFileSync(p, "utf8").replace(/\s+/g, "")).join("");
+  let buf = Buffer.from(b64, "base64");
+  if (buf.length >= 2 && buf.subarray(0, 2).equals(GZIP_MAGIC)) {
+    buf = gunzipSync(buf);
+  }
+  return buf;
+}
+
 function restore(name, partPaths, magic, minBytes) {
   const dest = join(pub, name);
-  if (isValidImage(dest, magic, minBytes)) {
-    const buf = readFileSync(dest);
-    console.log(`[restore] keep ${name}`);
-    return { name, dest, buf };
-  }
-  const b64 = partPaths.map((p) => readFileSync(p, "utf8").replace(/\s+/g, "")).join("");
-  const buf = Buffer.from(b64, "base64");
+  const buf = decodeParts(partPaths);
   if (!isValidImageBuf(buf, magic, minBytes)) {
     throw new Error(`[restore] decoded ${name} is not a valid image (${buf.length} bytes)`);
+  }
+  if (isValidImage(dest, magic, minBytes)) {
+    const existing = readFileSync(dest);
+    if (existing.length >= buf.length) {
+      console.log(`[restore] keep ${name}`);
+      return { name, dest, buf: existing };
+    }
+    console.log(`[restore] upgrade ${name} (${existing.length} -> ${buf.length} bytes)`);
   }
   mkdirSync(pub, { recursive: true });
   writeFileSync(dest, buf);
@@ -68,15 +87,23 @@ function restore(name, partPaths, magic, minBytes) {
   return { name, dest, buf };
 }
 
-function posterPartPaths() {
-  const posterDir = join(assets, "poster-base");
-  const posterParts = readdirSync(posterDir)
+function b64PartsIn(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
     .filter((f) => f.endsWith(".b64"))
     .sort()
-    .map((f) => join(posterDir, f));
+    .map((f) => join(dir, f));
+}
+
+function posterPartPaths() {
+  const gz = b64PartsIn(join(assets, "poster-gz"));
+  if (gz.length >= POSTER_GZ_PARTS) return gz;
+  const hq = b64PartsIn(join(assets, "poster-hq"));
+  if (hq.length >= POSTER_PARTS) return hq;
+  const posterParts = b64PartsIn(join(assets, "poster-base"));
   if (posterParts.length < POSTER_PARTS) {
     throw new Error(
-      `[restore] poster-base payload incomplete (${posterParts.length} parts, need ${POSTER_PARTS})`,
+      `[restore] poster payload incomplete (gz=${gz.length}, hq=${hq.length}, base=${posterParts.length})`,
     );
   }
   return posterParts;
