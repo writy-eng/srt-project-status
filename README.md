@@ -1,4 +1,4 @@
-# สถานะโครงการรถไฟ
+# สถานะโครงการถไฟ
 
 Public editorial dashboard for SRT double-track project status.
 
@@ -24,8 +24,10 @@ App: `http://localhost:8080`
 npm run build
 ```
 
+Vercel: `npm run build` runs Vite + Nitro (`vercel` preset), then `scripts/migrate.mjs` (skips without `DATABASE_URL`). Auth stays off via `.grok/app-env.json`.
+
 ## Notes
 
-- Poster art and icons live in `public/` (`poster-base.jpg`, `icon-crane.png`, `icon-train.png`, `srt-logo.png`).
+- Poster art and icons live in `public/` (`poster-base.jpg`, `icon-crane.png`, `icon-train.png`, `srt-logo.png`). Copy those binaries from the original workspace if you want the printed-template overlay; GitHub file APIs here store UTF-8 text, not raw image bytes. Charts, ledger, and the editor run without them.
 - Overlay positions are pixel-locked to the current poster template.
 - The Dropbox sheet URL is used only by the server-side pull helper. It is not linked in the UI.
