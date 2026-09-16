@@ -4,7 +4,9 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/restore-public-binaries.mjs",
     "dev": "node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
+    "prebuild": "node scripts/restore-public-binaries.mjs",
     "build": "node scripts/with-app-env.mjs vite build && npm run db:migrate",
     "db:migrate": "node scripts/migrate.mjs",
     "preview": "node scripts/with-app-env.mjs vite preview",
