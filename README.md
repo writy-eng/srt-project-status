@@ -1,4 +1,4 @@
-# สถานะโครงการถไฟ
+# สถานะโครงการรถไฟ
 
 Public editorial dashboard for SRT double-track project status.
 
