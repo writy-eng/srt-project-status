@@ -7,8 +7,11 @@
  * public/poster-base.jpg, public/icon-crane.png, and public/icon-train.png
  * before Vite copies public/ into the build. Existing valid originals (the
  * sandbox copies) are left untouched.
+ *
+ * The Vite plugin runs restore during config/buildStart so `vite build` on
+ * Vercel still writes the files even when npm's `prebuild` hook is skipped.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,8 +21,7 @@ const pub = join(root, "public");
 
 const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-
-mkdirSync(pub, { recursive: true });
+const POSTER_PARTS = 13;
 
 function isValidImage(dest, magic, minBytes) {
   if (!existsSync(dest)) return false;
@@ -47,15 +49,37 @@ function restore(name, partPaths, magic, minBytes) {
   return dest;
 }
 
-restore("icon-crane.png", [join(assets, "icon-crane.png.b64")], PNG_MAGIC, 1000);
-restore("icon-train.png", [join(assets, "icon-train.png.b64")], PNG_MAGIC, 1000);
+export function restorePublicBinaries() {
+  mkdirSync(pub, { recursive: true });
+  restore("icon-crane.png", [join(assets, "icon-crane.png.b64")], PNG_MAGIC, 1000);
+  restore("icon-train.png", [join(assets, "icon-train.png.b64")], PNG_MAGIC, 1000);
 
-const posterDir = join(assets, "poster-base");
-const posterParts = readdirSync(posterDir)
-  .filter((f) => f.endsWith(".b64"))
-  .sort()
-  .map((f) => join(posterDir, f));
-if (posterParts.length === 0) {
-  throw new Error("[restore] missing scripts/assets/poster-base/*.b64");
+  const posterDir = join(assets, "poster-base");
+  const posterParts = readdirSync(posterDir)
+    .filter((f) => f.endsWith(".b64"))
+    .sort()
+    .map((f) => join(posterDir, f));
+  if (posterParts.length < POSTER_PARTS) {
+    throw new Error(
+      `[restore] poster-base payload incomplete (${posterParts.length} parts, need ${POSTER_PARTS})`,
+    );
+  }
+  restore("poster-base.jpg", posterParts, JPEG_MAGIC, 90000);
 }
-restore("poster-base.jpg", posterParts, JPEG_MAGIC, 8000);
+
+export function restorePublicBinariesPlugin() {
+  return {
+    name: "restore-public-binaries",
+    enforce: "pre",
+    config() {
+      restorePublicBinaries();
+    },
+    buildStart() {
+      restorePublicBinaries();
+    },
+  };
+}
+
+const invokedDirectly =
+  Boolean(process.argv[1]) && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+if (invokedDirectly) restorePublicBinaries();
