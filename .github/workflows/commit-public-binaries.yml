@@ -26,7 +26,9 @@ jobs:
         with:
           node-version: "22"
       - name: Restore public JPEG/PNG binaries
-        run: node scripts/restore-public-binaries.mjs
+        run: |
+          rm -f public/poster-base.jpg
+          node scripts/restore-public-binaries.mjs
       - name: Commit restored files
         run: |
           set -euo pipefail
@@ -37,5 +39,5 @@ jobs:
             echo "Public binaries already committed"
             exit 0
           fi
-          git commit -m "Add public/poster-base.jpg and public/icon-crane.png"
+          git commit -m "Replace public/poster-base.jpg with full-quality JPEG"
           git push
